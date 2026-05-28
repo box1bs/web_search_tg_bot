@@ -21,8 +21,7 @@ load_dotenv()
 
 TOKEN = getenv('TG_TOKEN')
 log_file_path = getenv('LOG_FILE')
-# ip = getenv('IP')
-ip = 'localhost'
+ip = getenv('IP')
 server_url = f'http://{ip}/'
 
 
@@ -78,7 +77,8 @@ async def command_start_handler(message: Message) -> None:
 async def command_state_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
     try:
         async with http_session.get(url=server_url+'crawl/state', timeout=aiohttp.ClientTimeout(total=3)) as resp:
-            resp.raise_for_status()
+            if resp.status != 200:
+                raise Exception(f'invalid status code: {resp.status}')
             data = await resp.json()
             await message.answer(f'Last start: {data['LastStart']}\nUptime: {data['Uptime']}\nIndexed: {data['DocsInIndex']}\nRunning state: {'running' if data['IsRunning'] else 'stopped'}\n')
     except (aiohttp.ServerTimeoutError, asyncio.TimeoutError):
@@ -98,7 +98,8 @@ async def command_state_handler(message: Message, http_session: aiohttp.ClientSe
 async def command_crawl_start_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
     try:
         async with http_session.post(url=server_url+'crawl/start', timeout=aiohttp.ClientTimeout(total=3)) as resp:
-            resp.raise_for_status()
+            if resp.status != 201:
+                raise Exception(f'invalid status code: {resp.status}')
             await message.answer('Successfully started')
     except (aiohttp.ServerTimeoutError, asyncio.TimeoutError):
         await message.answer('Timeout')
@@ -117,7 +118,8 @@ async def command_crawl_start_handler(message: Message, http_session: aiohttp.Cl
 async def command_crawl_stop_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
     try:
         async with http_session.post(url=server_url+'crawl/stop', timeout=aiohttp.ClientTimeout(total=3)) as resp:
-            resp.raise_for_status()
+            if resp.status != 200:
+                raise Exception(f'invalid status code: {resp.status}')
             await message.answer('Successfully stopped')
     except (aiohttp.ServerTimeoutError, asyncio.TimeoutError):
         await message.answer('Timeout')
@@ -140,7 +142,8 @@ async def command_add_urls_handler(message: Message, http_session: aiohttp.Clien
 
     try:
         async with http_session.patch(url=server_url+'crawl/add', json={'urls': urls}, timeout=aiohttp.ClientTimeout(total=3)) as resp:
-            resp.raise_for_status()
+            if resp.status != 202:
+                raise Exception(f'invalid status code: {resp.status}')
             await message.answer('Successfully added')
     except (aiohttp.ServerTimeoutError, asyncio.TimeoutError):
         await message.answer('Timeout')
@@ -159,7 +162,8 @@ async def command_add_urls_handler(message: Message, http_session: aiohttp.Clien
 async def command_search_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
     try:
         async with http_session.get(url=server_url+'search', params={'query': '%20'.join(message.text.removeprefix('/search').strip().split()), 'cap': 10}, timeout=aiohttp.ClientTimeout(total=3)) as resp:
-            resp.raise_for_status()
+            if resp.status != 200:
+                raise Exception(f'invalid status code: {resp.status}')
             data = await resp.json()
             docs, rels, metrics = data['Docs'], data['Rels'], data['Metrics']
             ans_mess = ['<b>Search Results</b>:']
