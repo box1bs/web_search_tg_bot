@@ -137,7 +137,12 @@ async def command_crawl_stop_handler(message: Message, http_session: aiohttp.Cli
 @dp.message(Command('crawl_add'))
 async def command_add_urls_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
     urls = message.text.removeprefix('/crawl/add').strip().split()
-    if len(urls) > 50:
+    query_len = len(urls)
+    if query_len == 0:
+        await message.answer('empty urls list')
+        return
+
+    if query_len > 50:
         urls = urls[:50]
 
     try:
@@ -160,8 +165,13 @@ async def command_add_urls_handler(message: Message, http_session: aiohttp.Clien
 
 @dp.message(Command('search'))
 async def command_search_handler(message: Message, http_session: aiohttp.ClientSession) -> None:
+    query = message.text.removeprefix('/search').strip()
+    if len(query) == 0:
+        await message.answer('empty query')
+        return
+    
     try:
-        async with http_session.get(url=server_url+'search', params={'query': '%20'.join(message.text.removeprefix('/search').strip().split()), 'cap': 10}, timeout=aiohttp.ClientTimeout(total=3)) as resp:
+        async with http_session.get(url=server_url+'search', params={'query': '%20'.join(query.split()), 'cap': 10}, timeout=aiohttp.ClientTimeout(total=3)) as resp:
             if resp.status != 200:
                 raise Exception(f'invalid status code: {resp.status}')
             data = await resp.json()
